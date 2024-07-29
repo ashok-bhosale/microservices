@@ -593,3 +593,806 @@ These structural patterns help in organizing code structure, managing dependenci
 
 
 **Behavior**
+Behavioral design patterns are concerned with algorithms and the assignment of responsibilities between objects. They help in coordinating complex interactions between objects, making the design more flexible and reusable. Below are the common behavioral design patterns along with C# examples:
+
+### 1. **Chain of Responsibility Pattern**
+Passes a request along a chain of handlers. Each handler either processes the request or passes it to the next handler.
+
+**Example:**
+```csharp
+// Handler
+public abstract class Handler
+{
+    protected Handler _nextHandler;
+
+    public void SetNext(Handler handler)
+    {
+        _nextHandler = handler;
+    }
+
+    public abstract void HandleRequest(int request);
+}
+
+// Concrete Handlers
+public class ConcreteHandler1 : Handler
+{
+    public override void HandleRequest(int request)
+    {
+        if (request >= 0 && request < 10)
+        {
+            Console.WriteLine($"{nameof(ConcreteHandler1)} handled request {request}");
+        }
+        else
+        {
+            _nextHandler?.HandleRequest(request);
+        }
+    }
+}
+
+public class ConcreteHandler2 : Handler
+{
+    public override void HandleRequest(int request)
+    {
+        if (request >= 10 && request < 20)
+        {
+            Console.WriteLine($"{nameof(ConcreteHandler2)} handled request {request}");
+        }
+        else
+        {
+            _nextHandler?.HandleRequest(request);
+        }
+    }
+}
+
+// Client code
+class Program
+{
+    static void Main()
+    {
+        Handler handler1 = new ConcreteHandler1();
+        Handler handler2 = new ConcreteHandler2();
+
+        handler1.SetNext(handler2);
+
+        int[] requests = { 5, 14, 22, 8 };
+
+        foreach (var request in requests)
+        {
+            handler1.HandleRequest(request);
+        }
+    }
+}
+```
+
+### 2. **Command Pattern**
+Encapsulates a request as an object, thereby allowing for parameterization of clients with queues, requests, and operations.
+
+**Example:**
+```csharp
+// Command
+public interface ICommand
+{
+    void Execute();
+}
+
+// Concrete Command
+public class LightOnCommand : ICommand
+{
+    private readonly Light _light;
+
+    public LightOnCommand(Light light)
+    {
+        _light = light;
+    }
+
+    public void Execute()
+    {
+        _light.On();
+    }
+}
+
+// Receiver
+public class Light
+{
+    public void On() => Console.WriteLine("The light is on");
+}
+
+// Invoker
+public class RemoteControl
+{
+    private ICommand _command;
+
+    public void SetCommand(ICommand command)
+    {
+        _command = command;
+    }
+
+    public void PressButton()
+    {
+        _command.Execute();
+    }
+}
+
+// Client code
+class Program
+{
+    static void Main()
+    {
+        Light light = new Light();
+        ICommand lightOn = new LightOnCommand(light);
+
+        RemoteControl remote = new RemoteControl();
+        remote.SetCommand(lightOn);
+        remote.PressButton();
+    }
+}
+```
+
+### 3. **Interpreter Pattern**
+Defines a representation for a grammar and provides an interpreter to deal with this grammar.
+
+**Example:**
+```csharp
+// Context
+public class Context
+{
+    public string Input { get; set; }
+    public int Output { get; set; }
+}
+
+// Abstract Expression
+public abstract class Expression
+{
+    public abstract void Interpret(Context context);
+}
+
+// Terminal Expression
+public class NumberExpression : Expression
+{
+    private readonly int _number;
+
+    public NumberExpression(int number)
+    {
+        _number = number;
+    }
+
+    public override void Interpret(Context context)
+    {
+        context.Output = _number;
+    }
+}
+
+// Non-terminal Expression
+public class AddExpression : Expression
+{
+    private readonly Expression _left;
+    private readonly Expression _right;
+
+    public AddExpression(Expression left, Expression right)
+    {
+        _left = left;
+        _right = right;
+    }
+
+    public override void Interpret(Context context)
+    {
+        _left.Interpret(context);
+        int leftResult = context.Output;
+
+        _right.Interpret(context);
+        int rightResult = context.Output;
+
+        context.Output = leftResult + rightResult;
+    }
+}
+
+// Client code
+class Program
+{
+    static void Main()
+    {
+        Context context = new Context();
+        Expression expression = new AddExpression(new NumberExpression(5), new NumberExpression(10));
+
+        expression.Interpret(context);
+        Console.WriteLine(context.Output); // Output: 15
+    }
+}
+```
+
+### 4. **Iterator Pattern**
+Provides a way to access the elements of an aggregate object sequentially without exposing its underlying representation.
+
+**Example:**
+```csharp
+// Aggregate
+public interface IIterableCollection
+{
+    IIterator CreateIterator();
+}
+
+// Concrete Aggregate
+public class ConcreteCollection : IIterableCollection
+{
+    private readonly List<string> _items = new List<string>();
+
+    public void AddItem(string item) => _items.Add(item);
+
+    public IIterator CreateIterator() => new ConcreteIterator(this);
+
+    public int Count => _items.Count;
+
+    public string this[int index] => _items[index];
+}
+
+// Iterator
+public interface IIterator
+{
+    bool HasNext();
+    string Next();
+}
+
+// Concrete Iterator
+public class ConcreteIterator : IIterator
+{
+    private readonly ConcreteCollection _collection;
+    private int _index;
+
+    public ConcreteIterator(ConcreteCollection collection)
+    {
+        _collection = collection;
+    }
+
+    public bool HasNext() => _index < _collection.Count;
+
+    public string Next() => HasNext() ? _collection[_index++] : null;
+}
+
+// Client code
+class Program
+{
+    static void Main()
+    {
+        ConcreteCollection collection = new ConcreteCollection();
+        collection.AddItem("Item 1");
+        collection.AddItem("Item 2");
+        collection.AddItem("Item 3");
+
+        IIterator iterator = collection.CreateIterator();
+        while (iterator.HasNext())
+        {
+            Console.WriteLine(iterator.Next());
+        }
+    }
+}
+```
+
+### 5. **Mediator Pattern**
+Defines an object that encapsulates how a set of objects interact, promoting loose coupling by preventing objects from referring to each other explicitly.
+
+**Example:**
+```csharp
+// Mediator
+public interface IMediator
+{
+    void Notify(object sender, string ev);
+}
+
+// Concrete Mediator
+public class ConcreteMediator : IMediator
+{
+    private Component1 _component1;
+    private Component2 _component2;
+
+    public ConcreteMediator(Component1 component1, Component2 component2)
+    {
+        _component1 = component1;
+        _component1.SetMediator(this);
+        _component2 = component2;
+        _component2.SetMediator(this);
+    }
+
+    public void Notify(object sender, string ev)
+    {
+        if (ev == "A")
+        {
+            Console.WriteLine("Mediator reacts on A and triggers following operations:");
+            _component2.DoC();
+        }
+        if (ev == "D")
+        {
+            Console.WriteLine("Mediator reacts on D and triggers following operations:");
+            _component1.DoB();
+        }
+    }
+}
+
+// Base Component
+public class BaseComponent
+{
+    protected IMediator _mediator;
+
+    public void SetMediator(IMediator mediator)
+    {
+        _mediator = mediator;
+    }
+}
+
+// Component1
+public class Component1 : BaseComponent
+{
+    public void DoA()
+    {
+        Console.WriteLine("Component 1 does A.");
+        _mediator.Notify(this, "A");
+    }
+
+    public void DoB()
+    {
+        Console.WriteLine("Component 1 does B.");
+        _mediator.Notify(this, "B");
+    }
+}
+
+// Component2
+public class Component2 : BaseComponent
+{
+    public void DoC()
+    {
+        Console.WriteLine("Component 2 does C.");
+        _mediator.Notify(this, "C");
+    }
+
+    public void DoD()
+    {
+        Console.WriteLine("Component 2 does D.");
+        _mediator.Notify(this, "D");
+    }
+}
+
+// Client code
+class Program
+{
+    static void Main()
+    {
+        Component1 component1 = new Component1();
+        Component2 component2 = new Component2();
+        new ConcreteMediator(component1, component2);
+
+        Console.WriteLine("Client triggers operation A.");
+        component1.DoA();
+
+        Console.WriteLine();
+
+        Console.WriteLine("Client triggers operation D.");
+        component2.DoD();
+    }
+}
+```
+
+### 6. **Memento Pattern**
+Captures and externalizes an object's internal state, allowing it to be restored to this state later.
+
+**Example:**
+```csharp
+// Memento
+public class Memento
+{
+    public string State { get; }
+
+    public Memento(string state)
+    {
+        State = state;
+    }
+}
+
+// Originator
+public class Originator
+{
+    public string State { get; set; }
+
+    public Memento SaveState()
+    {
+        return new Memento(State);
+    }
+
+    public void RestoreState(Memento memento)
+    {
+        State = memento.State;
+    }
+}
+
+// Caretaker
+public class Caretaker
+{
+    private readonly List<Memento> _mementos = new List<Memento>();
+    private readonly Originator _originator;
+
+    public Caretaker(Originator originator)
+    {
+        _originator = originator;
+    }
+
+    public void Backup()
+    {
+        _mementos.Add(_originator.SaveState());
+    }
+
+    public void Undo()
+    {
+        if (_mementos.Count == 0) return;
+
+        Memento memento = _mementos[^1];
+        _mementos.RemoveAt(_mementos.Count - 1);
+        _originator.RestoreState(memento);
+    }
+}
+
+// Client code
+class Program
+{
+    static void Main()
+    {
+        Originator originator = new Originator();
+        Caretaker caretaker = new Caretaker(originator);
+
+        originator.State = "State1";
+        caretaker.Backup();
+
+        originator.State = "State
+
+2";
+        caretaker.Backup();
+
+        originator.State = "State3";
+        caretaker.Backup();
+
+        Console.WriteLine("Current State: " + originator.State);
+
+        caretaker.Undo();
+        Console.WriteLine("Restored State: " + originator.State);
+
+        caretaker.Undo();
+        Console.WriteLine("Restored State: " + originator.State);
+    }
+}
+```
+
+### 7. **Observer Pattern**
+Defines a one-to-many dependency between objects so that when one object changes state, all its dependents are notified and updated automatically.
+
+**Example:**
+```csharp
+// Subject
+public class Subject
+{
+    private readonly List<IObserver> _observers = new List<IObserver>();
+
+    private int _state;
+    public int State
+    {
+        get => _state;
+        set
+        {
+            _state = value;
+            Notify();
+        }
+    }
+
+    public void Attach(IObserver observer)
+    {
+        _observers.Add(observer);
+    }
+
+    public void Detach(IObserver observer)
+    {
+        _observers.Remove(observer);
+    }
+
+    private void Notify()
+    {
+        foreach (var observer in _observers)
+        {
+            observer.Update();
+        }
+    }
+}
+
+// Observer
+public interface IObserver
+{
+    void Update();
+}
+
+// Concrete Observer
+public class ConcreteObserver : IObserver
+{
+    private readonly string _name;
+    private readonly Subject _subject;
+
+    public ConcreteObserver(string name, Subject subject)
+    {
+        _name = name;
+        _subject = subject;
+        _subject.Attach(this);
+    }
+
+    public void Update()
+    {
+        Console.WriteLine($"{_name} notified. New state: {_subject.State}");
+    }
+}
+
+// Client code
+class Program
+{
+    static void Main()
+    {
+        Subject subject = new Subject();
+
+        var observer1 = new ConcreteObserver("Observer 1", subject);
+        var observer2 = new ConcreteObserver("Observer 2", subject);
+
+        subject.State = 1;
+        subject.State = 2;
+    }
+}
+```
+
+### 8. **State Pattern**
+Allows an object to alter its behavior when its internal state changes. The object will appear to change its class.
+
+**Example:**
+```csharp
+// State Interface
+public interface IState
+{
+    void Handle(Context context);
+}
+
+// Concrete States
+public class ConcreteStateA : IState
+{
+    public void Handle(Context context)
+    {
+        Console.WriteLine("Handling in State A");
+        context.State = new ConcreteStateB();
+    }
+}
+
+public class ConcreteStateB : IState
+{
+    public void Handle(Context context)
+    {
+        Console.WriteLine("Handling in State B");
+        context.State = new ConcreteStateA();
+    }
+}
+
+// Context
+public class Context
+{
+    private IState _state;
+
+    public Context(IState state)
+    {
+        State = state;
+    }
+
+    public IState State
+    {
+        get => _state;
+        set
+        {
+            _state = value;
+            Console.WriteLine($"State changed to {value.GetType().Name}");
+        }
+    }
+
+    public void Request()
+    {
+        _state.Handle(this);
+    }
+}
+
+// Client code
+class Program
+{
+    static void Main()
+    {
+        Context context = new Context(new ConcreteStateA());
+
+        context.Request();
+        context.Request();
+    }
+}
+```
+
+### 9. **Strategy Pattern**
+Defines a family of algorithms, encapsulates each one, and makes them interchangeable. It lets the algorithm vary independently from clients that use it.
+
+**Example:**
+```csharp
+// Strategy Interface
+public interface IStrategy
+{
+    void Execute();
+}
+
+// Concrete Strategies
+public class ConcreteStrategyA : IStrategy
+{
+    public void Execute()
+    {
+        Console.WriteLine("Strategy A Execution");
+    }
+}
+
+public class ConcreteStrategyB : IStrategy
+{
+    public void Execute()
+    {
+        Console.WriteLine("Strategy B Execution");
+    }
+}
+
+// Context
+public class Context
+{
+    private IStrategy _strategy;
+
+    public Context(IStrategy strategy)
+    {
+        _strategy = strategy;
+    }
+
+    public void SetStrategy(IStrategy strategy)
+    {
+        _strategy = strategy;
+    }
+
+    public void ExecuteStrategy()
+    {
+        _strategy.Execute();
+    }
+}
+
+// Client code
+class Program
+{
+    static void Main()
+    {
+        Context context = new Context(new ConcreteStrategyA());
+        context.ExecuteStrategy();
+
+        context.SetStrategy(new ConcreteStrategyB());
+        context.ExecuteStrategy();
+    }
+}
+```
+
+### 10. **Template Method Pattern**
+Defines the skeleton of an algorithm in an operation, deferring some steps to subclasses. Template Method lets subclasses redefine certain steps of an algorithm without changing the algorithm's structure.
+
+**Example:**
+```csharp
+// Abstract Class
+public abstract class AbstractClass
+{
+    public void TemplateMethod()
+    {
+        BaseOperation1();
+        RequiredOperation1();
+        BaseOperation2();
+        RequiredOperation2();
+    }
+
+    protected void BaseOperation1()
+    {
+        Console.WriteLine("Base operation 1");
+    }
+
+    protected void BaseOperation2()
+    {
+        Console.WriteLine("Base operation 2");
+    }
+
+    protected abstract void RequiredOperation1();
+    protected abstract void RequiredOperation2();
+}
+
+// Concrete Class
+public class ConcreteClass : AbstractClass
+{
+    protected override void RequiredOperation1()
+    {
+        Console.WriteLine("Concrete operation 1");
+    }
+
+    protected override void RequiredOperation2()
+    {
+        Console.WriteLine("Concrete operation 2");
+    }
+}
+
+// Client code
+class Program
+{
+    static void Main()
+    {
+        AbstractClass abstractClass = new ConcreteClass();
+        abstractClass.TemplateMethod();
+    }
+}
+```
+
+### 11. **Visitor Pattern**
+Represents an operation to be performed on the elements of an object structure. It lets you define a new operation without changing the classes of the elements on which it operates.
+
+**Example:**
+```csharp
+// Visitor Interface
+public interface IVisitor
+{
+    void VisitElementA(ElementA elementA);
+    void VisitElementB(ElementB elementB);
+}
+
+// Concrete Visitor
+public class ConcreteVisitor : IVisitor
+{
+    public void VisitElementA(ElementA elementA)
+    {
+        Console.WriteLine("Visited Element A");
+    }
+
+    public void VisitElementB(ElementB elementB)
+    {
+        Console.WriteLine("Visited Element B");
+    }
+}
+
+// Element Interface
+public interface IElement
+{
+    void Accept(IVisitor visitor);
+}
+
+// Concrete Elements
+public class ElementA : IElement
+{
+    public void Accept(IVisitor visitor)
+    {
+        visitor.VisitElementA(this);
+    }
+}
+
+public class ElementB : IElement
+{
+    public void Accept(IVisitor visitor)
+    {
+        visitor.VisitElementB(this);
+    }
+}
+
+// Client code
+class Program
+{
+    static void Main()
+    {
+        List<IElement> elements = new List<IElement>
+        {
+            new ElementA(),
+            new ElementB()
+        };
+
+        IVisitor visitor = new ConcreteVisitor();
+        foreach (var element in elements)
+        {
+            element.Accept(visitor);
+        }
+    }
+}
+```
+
+These examples provide a basic overview and implementation of each behavioral design pattern in C#. For each pattern, the code demonstrates the pattern's intent and how it can be applied in a C# application.
